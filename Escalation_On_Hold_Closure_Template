@@ -1,0 +1,329 @@
+// ==UserScript==
+// @name         On-HOLD, Escalation, and Closure Template
+// @include     /^https?://ciscomngsvsprod.service-now.com.*incident.do.*/
+// @include     /^https?://ciscomngsvsprod.service-now.com.*sc_req_item.do.*/
+// @include     /^https?://ciscomngsvsstage.service-now.com.*incident.do.*/
+// @include     /^https?://ciscomngsvsstage.service-now.com.*sc_req_item.do.*/
+// @version      0.2
+// @description  On-Hold, Escalation, and Closure Template
+// @grant    GM_setClipboard
+// @author       Atul Solanki
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    // Identifies the platform (Production or Staging)
+    function identify_platform(domain) {
+        if (domain.includes('prod')) {
+            return 'Production';
+        } else if (domain.includes('stage')) {
+            return 'Staging';
+        } else {
+            return '';
+        }
+    }
+
+    // Generates a note for on-hold for an INC
+    function generate_onhold_inc_note(ticket_number) {
+        let url = new URL(window.location.href);
+        let domain = identify_platform(url.host);
+        let company_account = document.getElementById('sys_display.incident.company').value;
+        let assignment_group = document.getElementById('sys_display.incident.assignment_group').value;
+        let configuration_item = document.getElementById('sys_display.incident.cmdb_ci').value;
+        let description = document.getElementById('incident.short_description').value;
+        let impact = document.getElementById('incident.impact').value;
+        let urgency = document.getElementById('incident.urgency').options[document.getElementById('incident.urgency').selectedIndex].text;
+
+        let channel = document.getElementById('incident.contact_type').value;
+        let ticket_type = channel.includes('Monitoring') ? 'Proactive' : 'Reactive';
+        let ve_engaged = ticket_type === 'Reactive' ? '' : 'VE engaged (Yes/No): \nVE reason for escalation:';
+
+        let work_note = `Update: On-HOLD
+Ticket: ${ticket_number} | ${ticket_type}
+Platform: ${domain}
+Customer: ${company_account}
+CI: ${configuration_item}
+Urgency: ${urgency}
+Impact: P${impact}
+Issue: ${description}
+${ve_engaged}
+
+Status/Actions Taken:
+1.
+2.
+
+Next action plan:`;
+
+        let work_note_textbox = document.querySelectorAll('[data-stream-text-input="work_notes"]')[0];
+        if (work_note_textbox) {
+            work_note_textbox.value = work_note;
+            work_note_textbox.focus();
+            work_note_textbox.select();
+        }
+    }
+
+    // Generates a note for on-hold for a RITM
+    function generate_onhold_ritm_note(ticket_number) {
+        let url = new URL(window.location.href);
+        let domain = identify_platform(url.host);
+        let request = document.getElementById('sys_display.sc_req_item.request').value;
+        let company_account = document.getElementById('sys_display.sc_req_item.company').value;
+        let assignment_group = document.getElementById('sys_display.sc_req_item.assignment_group').value;
+        let configuration_item = document.getElementById('sys_display.sc_req_item.cat_item').value;
+        let description = document.getElementById('sc_req_item.description').value;
+
+        let work_note = `Update: On-HOLD
+Ticket: ${ticket_number} | ${request}
+Platform: ${domain}
+Customer: ${company_account}
+CI: ${configuration_item}
+Issue:
+${description}
+
+
+Status/Actions Taken:
+1.
+2.
+
+Next action plan:`;
+
+        let work_note_textbox = document.querySelectorAll('[data-stream-text-input="comments"]')[0];
+        if (work_note_textbox) {
+            work_note_textbox.value = work_note;
+            work_note_textbox.focus();
+            work_note_textbox.select();
+        }
+    }
+
+    // Generates a note for escalating an INC and copies the escalation template to the clipboard
+    function generate_escalation_inc_note(ticket_number) {
+        let url = new URL(window.location.href);
+        let domain = identify_platform(url.host);
+        let company_account = document.getElementById('sys_display.incident.company').value;
+        let assignment_group = document.getElementById('sys_display.incident.assignment_group').value;
+        let configuration_item = document.getElementById('sys_display.incident.cmdb_ci').value;
+        let description = document.getElementById('incident.short_description').value;
+        let impact = document.getElementById('incident.impact').value;
+        let urgency = document.getElementById('incident.urgency').options[document.getElementById('incident.urgency').selectedIndex].text;
+
+        let channel = document.getElementById('incident.contact_type').value;
+        let ticket_type = channel.includes('Monitoring') ? 'Proactive' : 'Reactive';
+        let ve_engaged = ticket_type === 'Reactive' ? '' : 'VE engaged (Yes/No): \n ';
+
+        let work_note = `Attn: ${assignment_group}
+Ticket: ${ticket_number} | ${ticket_type}
+Platform: ${domain}
+Customer: ${company_account}
+CI: ${configuration_item}
+Urgency: ${urgency}
+Impact: P${impact}
+Issue: ${description}
+${ve_engaged}
+
+Reason for Escalation:
+
+Status/Actions Taken:
+1.
+2.  `;
+
+        let work_note_textbox = document.querySelectorAll('[data-stream-text-input="work_notes"]')[0];
+        if (work_note_textbox) {
+            work_note_textbox.value = work_note;
+            work_note_textbox.focus();
+            work_note_textbox.select();
+        }
+
+        let escalation_template = `**Attn:** ${assignment_group}
+**Ticket:** [${ticket_number}](${url.href}) | ${ticket_type}
+**Platform:** ${domain}
+**Customer:** ${company_account}
+**CI:** ${configuration_item}
+**Urgency:** ${urgency}
+**Impact:** P${impact}
+**Issue:** ${description}
+
+${ticket_type === 'Reactive' ? '' : '\n**VE engaged (Yes/No):**\n'}
+**Reason for Escalation:**
+
+**Status/Actions Taken:**
+1.
+2.   `;
+
+        GM_setClipboard(escalation_template);
+    }
+
+    // Generates a note for escalating a RITM and copies the escalation template to the clipboard
+    function generate_escalation_ritm_note(ticket_number) {
+        let url = new URL(window.location.href);
+        let domain = identify_platform(url.host);
+        let request = document.getElementById('sys_display.sc_req_item.request').value;
+        let company_account = document.getElementById('sys_display.sc_req_item.company').value;
+        let assignment_group = document.getElementById('sys_display.sc_req_item.assignment_group').value;
+        let configuration_item = document.getElementById('sys_display.sc_req_item.cat_item').value;
+        let description = document.getElementById('sc_req_item.description').value;
+
+        let work_note = `Attn: ${assignment_group}
+Ticket: ${ticket_number} | ${request}
+Platform: ${domain}
+Customer: ${company_account}
+CI: ${configuration_item}
+Issue:
+${description}
+
+Reason for Escalation:
+
+Status/Actions Taken:
+1.
+2.  `;
+
+        let work_note_textbox = document.querySelectorAll('[data-stream-text-input="comments"]')[0];
+        if (work_note_textbox) {
+            work_note_textbox.value = work_note;
+            work_note_textbox.focus();
+            work_note_textbox.select();
+        }
+
+        let escalation_template = `Attn: ${assignment_group}
+**Ticket:** [${ticket_number}](${url.href}) | ${request}
+**Platform:** ${domain}
+**Customer:** ${company_account}
+**CI:** ${configuration_item}
+**Issue:**
+${description}
+
+**Reason for Escalation:**
+
+**Status/Actions Taken:**
+1.
+2.
+ `;
+
+        GM_setClipboard(escalation_template);
+    }
+
+    // Generates a closure note for an INC
+    function generate_closure_inc_note(ticket_number) {
+        let url = new URL(window.location.href);
+        let domain = identify_platform(url.host);
+        let company_account = document.getElementById('sys_display.incident.company').value;
+        let assignment_group = document.getElementById('sys_display.incident.assignment_group').value;
+        let configuration_item = document.getElementById('sys_display.incident.cmdb_ci').value;
+        let description = document.getElementById('incident.short_description').value;
+        let impact = document.getElementById('incident.impact').value;
+        let urgency = document.getElementById('incident.urgency').options[document.getElementById('incident.urgency').selectedIndex].text;
+
+        let channel = document.getElementById('incident.contact_type').value;
+        let ticket_type = channel.includes('Monitoring') ? 'Proactive' : 'Reactive';
+        let ve_engaged = ticket_type === 'Reactive' ? '' : 'VE engaged (Yes/No): \n';
+
+        let work_note = `Notification Type: Closure
+Ticket: ${ticket_number} | ${ticket_type}
+Platform: ${domain}
+Customer: ${company_account}
+CI: ${configuration_item}
+Issue: ${description}
+${ve_engaged}
+
+Status/Actions Taken:
+1.
+2.
+
+
+Resolution Outcome:`;
+
+        let work_note_textbox = document.getElementById('incident.close_notes');
+        if (work_note_textbox) {
+            work_note_textbox.value = work_note;
+            work_note_textbox.focus();
+            work_note_textbox.select();
+        }
+    }
+
+
+    // Generates the appropriate note based on ticket type and action
+function generate_ticket_note(action) {
+    let ticket_number = document.getElementsByClassName('navbar-title-display-value')[0].textContent.trim();
+    if (ticket_number.includes('INC')) {
+        if (action === 'onhold') {
+            generate_onhold_inc_note(ticket_number);
+        } else if (action === 'escalation') {
+            generate_escalation_inc_note(ticket_number);
+        } else if (action === 'closure_temp') {
+            generate_closure_inc_note(ticket_number);
+        }
+    } else if (ticket_number.includes('RITM')) {
+        if (action === 'onhold') {
+            generate_onhold_ritm_note(ticket_number);
+        } else if (action === 'escalation') {
+            generate_escalation_ritm_note(ticket_number);
+        }
+    }
+}
+
+    /*
+    Adds a dropdown for the user to select the action (On-Hold or Escalation) and an Apply button
+    */
+    function add_dropdown() {
+        console.log('Creating Dropdown and Apply Button');
+        let save_button = document.querySelector('button#sysverb_update_and_stay');
+        if (!save_button) {
+            console.error('Save button not found.');
+            return;
+        }
+        let parent_div = save_button.parentNode;
+
+        // Create the dropdown
+        let dropdown = document.createElement('select');
+        dropdown.setAttribute('id', 'action_dropdown');
+        dropdown.className = 'form_action_button header action_context btn btn-default';
+        dropdown.style.marginRight = '10px'; // Add some spacing
+
+        // Create the "Escalation" option and set it as default
+        let escalation_option = document.createElement('option');
+        escalation_option.value = 'escalation';
+        escalation_option.text = 'Escalation';
+        dropdown.appendChild(escalation_option);
+
+        // Create the "On Hold" option
+        let onhold_option = document.createElement('option');
+        onhold_option.value = 'onhold';
+        onhold_option.text = 'On Hold';
+        dropdown.appendChild(onhold_option);
+
+	// Create the "Closure Temp" option
+        let closure_temp_option = document.createElement('option');
+        closure_temp_option.value = 'closure_temp';
+        closure_temp_option.text = 'Closure Temp';
+        dropdown.appendChild(closure_temp_option);
+
+        // Create the Apply button
+        let apply_button = document.createElement('button');
+        apply_button.innerHTML = 'Apply';
+        apply_button.setAttribute('id', 'apply_btn');
+        apply_button.className = 'form_action_button header action_context btn btn-primary';
+        apply_button.style.marginLeft = '5px'; // Add some spacing
+
+        // Define the onclick behavior for the Apply button
+        apply_button.onclick = function() {
+            let selected_action = dropdown.value;
+            generate_ticket_note(selected_action);
+        };
+
+        // Append the dropdown and Apply button to the parent div
+        parent_div.appendChild(dropdown);
+        parent_div.appendChild(apply_button);
+        console.log('Dropdown and Apply Button Created');
+    }
+
+    /*
+    Wait loop to know when to perform page adjustments
+    */
+    var existCondition = setInterval(function() {
+        if (document.querySelector('button#sysverb_update_and_stay')) {
+            console.log('Found the save button. Proceeding to add dropdown.');
+            clearInterval(existCondition);
+            add_dropdown();
+        }
+    }, 1000);
+})();
