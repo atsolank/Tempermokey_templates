@@ -1,0 +1,111 @@
+// ==UserScript==
+// @name         Copy Event Details
+// @include     /^https?://ciscomngsvsprod.service-now.com.*x_sclo_scilogic_event.do*/
+// @include     /^https?://ciscomngsvsprod.service-now.com.*x_cims_cms_event_m_cms_actionable_events.do*/
+// @include     /^https?://ciscomngsvsstage.service-now.com.*x_sclo_scilogic_event.do.*/
+// @include     /^https?://ciscomngsvsstage.service-now.com.*x_cims_cms_event_m_cms_actionable_events.do.*/
+// @grant    GM_setClipboard
+// @description  Generate an copy template
+// @version      0.1
+// @author       Atul Solanki
+// ==/UserScript==
+
+function generate_event_notes(ticket_number){
+    let incident = document.getElementById('x_sclo_scilogic_event.incident_label').value;
+    let device = document.getElementById('x_sclo_scilogic_event.device_label').value;
+    let organization_label = document.getElementById('x_sclo_scilogic_event.organization_label').value;
+    let event_id = document.getElementById('sys_readonly.x_sclo_scilogic_event.event_id').value;
+    let severity = document.getElementById('sys_readonly.x_sclo_scilogic_event.severity').value;
+    let event_policy = document.getElementById('sys_readonly.x_sclo_scilogic_event.event_policy').value;
+    let policy_guid = document.getElementById('sys_readonly.x_sclo_scilogic_event.u_policy_guid').value;
+    let automation_policy = document.getElementById('sys_readonly.x_sclo_scilogic_event.automation_policy').value;
+    let action_policy = document.getElementById('sys_readonly.x_sclo_scilogic_event.action_policy').value;
+    let message = document.getElementById('sys_readonly.x_sclo_scilogic_event.message').value;
+    let event_created = document.getElementById('sys_readonly.x_sclo_scilogic_event.event_created').value;
+    let last_detected = document.getElementById('sys_readonly.x_sclo_scilogic_event.u_event_last_cleared').value;
+
+
+    let update = `Event Details: \n=========================================\nIncident: ${incident}\nDevice: ${device}\nOrganization Label: ${organization_label}\nSeverity: ${severity}\nEvent ID: ${event_id}\nEvent Policy: ${event_policy}\nAutomation Policy: ${automation_policy}\nAction Policy: ${action_policy}\nMessage: ${message}\nEvent Created: ${event_created}\nPolicy GUID: ${policy_guid}`;
+
+    return update
+
+}
+
+
+
+function generate_splunk_event_notes(ticket_number){
+    let incident = document.getElementById('x_cims_cms_event_m_cms_actionable_events.number').value;
+    let ci_node = document.getElementById('x_cims_cms_event_m_cms_actionable_events.ci_node').value;
+    let account = document.getElementById('sys_display.x_cims_cms_event_m_cms_actionable_events.account').value;
+    let actionable_event_staging_number = document.getElementById('x_cims_cms_event_m_cms_actionable_events.actionable_event_staging_number').value;
+    let event_identifier = document.getElementById('x_cims_cms_event_m_cms_actionable_events.event_identifier').value;
+    let event_message = document.getElementById('x_cims_cms_event_m_cms_actionable_events.event_message').value;
+    let event_metric_name = document.getElementById('x_cims_cms_event_m_cms_actionable_events.event_metric_name').value;
+    let event_source = document.getElementById('x_cims_cms_event_m_cms_actionable_events.event_source').value;
+    let event_type = document.getElementById('x_cims_cms_event_m_cms_actionable_events.event_type').value;
+    let processing_status = document.getElementById('x_cims_cms_event_m_cms_actionable_events.processing_status').value;
+    let severity = document.getElementById('x_cims_cms_event_m_cms_actionable_events.severity').value;
+    let incident_ticket = document.getElementById('x_cims_cms_event_m_cms_actionable_events.incident_ticket').value;
+    let derived_ci = document.getElementById('sys_display.x_cims_cms_event_m_cms_actionable_events.derived_ci').value;
+    let clean_up = document.getElementById('x_cims_cms_event_m_cms_actionable_events.u_clean_up').value;
+    let retry_count = document.getElementById('x_cims_cms_event_m_cms_actionable_events.u_retry_count').value;
+    let logs = document.getElementById('sys_readonly.x_cims_cms_event_m_cms_actionable_events.logs').value;
+    let correlation_type = document.getElementById('x_cims_cms_event_m_cms_actionable_events.correlation_type').value;
+
+    let update = `Event Details: \n=========================================\nIncident= ${incident}\nCI Node= ${ci_node}\nAccount= ${account}\nActionable Event Staging Number= ${actionable_event_staging_number}\nEvent Identifier= ${event_identifier}\nEvent Message= ${event_message}\nEvent Metric Name= ${event_metric_name}\nEvent Source= ${event_source}\nEvent Type= ${event_type}\nProcessing State= ${processing_status}\nSeverity= ${severity}\nIncident Ticket= ${incident_ticket}\nDerived CI= ${derived_ci}\nClean Up= ${clean_up}\nRetry Count= ${retry_count}\nLogs= ${logs}\nCorrelation Type= ${correlation_type}\n=========================================\n`;
+
+    return update
+
+}
+
+
+
+
+function generate_ticket_note() {
+    let ticket_number = document.getElementsByClassName('navbar-title-caption')[0].textContent;
+    let update = '';
+    if (ticket_number ===('Event')) {
+        console.log('1 '+ticket_number )
+        update = generate_event_notes(ticket_number)
+
+
+    }
+    else
+    if (ticket_number === ('CMS Actionable Events')) {
+        console.log('2 '+ticket_number )
+        update = generate_splunk_event_notes(ticket_number)
+    }
+    GM_setClipboard(update);
+}
+
+
+
+/*
+Adds a button for the user to click so that the clipboard can be set to the escalation node
+*/
+
+function add_escalation_button() {
+    console.log('Creating Button');
+    let save_button = document.getElementsByClassName('container-fluid')[0];
+    let button = document.createElement('button');
+    button.innerHTML = 'Copy Event';
+    button.setAttribute('id', 'copy_event_btn');
+    button.setAttribute('value', 'copy_event_btn');
+    button.setAttribute('data-action-name', 'copy_event_template');
+    button.setAttribute('data-original-title', 'Copy Event Details to Clipboard');
+    button.addClassName('form_action_button header  action_context btn btn-default');
+    button.onclick = generate_ticket_note;
+    save_button.appendChild(button);
+    console.log('Created');
+}
+
+/*
+Wait loop to know when to perform page adjustments
+*/
+var existCondition = setInterval(function() {
+    if (document.querySelectorAll('button#sysverb_update_and_stay')) {
+        console.log('clearing interval');
+        clearInterval(existCondition);
+        add_escalation_button();
+ }
+}, 1000);
