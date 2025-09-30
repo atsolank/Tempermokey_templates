@@ -1,0 +1,24 @@
+// ==UserScript==
+// @name         Remove Background Image
+// @version      1.0
+// @description  Remove background image from .list-flavin class
+// @include     /^https?://ciscomngsvsprod.service-now.com/*home.do*/
+// @include     /^https?:\/\/ciscomngsvsstage\.service-now\.com\/.*dashboard\.do/
+// @grant        GM_addStyle
+// @author       Atul Solanki
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    // Remove the background image
+    GM_addStyle(`
+    .dash-body .list-flavin,
+    .list-flavin {
+        background: none !important;
+        width: auto !important;
+        height: auto !important;
+    }
+`);
+
+})();
